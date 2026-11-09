@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Peso Claro",
+    "slug": "peso-claro",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.pesoclaro.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#EAF6EF"
+      }
+    },
+    "splash": {
+      "backgroundColor": "#F5F7F8"
+    }
+  }
+}
