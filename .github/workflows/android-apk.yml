@@ -1,0 +1,41 @@
+name: Crear APK Android - Peso Claro
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Generar APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Configurar Expo y EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          expo-token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Enviar APK a compilar
+        run: eas build --platform android --profile preview --non-interactive
+
+      - name: Enlace de descargas
+        if: always()
+        run: |
+          echo "## Peso Claro - APK Android" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cuando termine la compilación, abre [tus compilaciones de Peso Claro](https://expo.dev/accounts/vicluna/projects/peso-claro/builds) y descarga el APK más reciente." >> "$GITHUB_STEP_SUMMARY"
