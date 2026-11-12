@@ -25,7 +25,8 @@ const todayISO = () => new Date().toISOString();
 
 const DEFAULT_DATA = {
   transactions: [], exchangeRate: '17.50', savingsGoal: '10000',
-  savings: 0, foodBudget: '1500', payments: []
+  savings: 0, foodBudget: '1500', payments: [],
+  savingGoals: [{ id: 'legacy-main', name: 'Mi primera meta', target: 10000, saved: 0 }]
 };
 
 function Button({ title, onPress, variant = 'primary', style, small = false }) {
@@ -133,8 +134,9 @@ export default function App() {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
-          const parsed = { ...DEFAULT_DATA, ...JSON.parse(raw) };
-          if (!Array.isArray(parsed.savingGoals) || !parsed.savingGoals.length) {
+          const stored = JSON.parse(raw);
+          const parsed = { ...DEFAULT_DATA, ...stored };
+          if (!Array.isArray(stored.savingGoals) || !stored.savingGoals.length) {
             parsed.savingGoals = [{ id: 'legacy-main', name: 'Meta de ahorro', target: Number(parsed.savingsGoal) || 10000, saved: Number(parsed.savings) || 0 }];
             parsed.savingsEntries = (parsed.savingsEntries || []).map(item => ({ ...item, goalId: item.goalId || 'legacy-main' }));
           } else {
@@ -268,11 +270,10 @@ export default function App() {
   };
   const saveSettings = () => {
     const r = Number(rateInput.replace(',', '.'));
-    const g = Number(goalInput.replace(',', '.'));
     const f = Number(foodInput.replace(',', '.'));
-    if (!Number.isFinite(r) || r <= 0 || !Number.isFinite(g) || g <= 0 || !Number.isFinite(f) || f < 0)
-      return Alert.alert('Revisa los valores', 'El tipo de cambio y la meta deben ser mayores que cero. El presupuesto de comida no puede ser negativo.');
-    setData(prev => ({ ...prev, exchangeRate: String(r), savingsGoal: String(g), foodBudget: String(f) }));
+    if (!Number.isFinite(r) || r <= 0 || !Number.isFinite(f) || f < 0)
+      return Alert.alert('Revisa los valores', 'El tipo de cambio debe ser mayor que cero y el presupuesto de comida no puede ser negativo.');
+    setData(prev => ({ ...prev, exchangeRate: String(r), foodBudget: String(f) }));
     Alert.alert('Guardado', 'Tus ajustes se actualizaron.');
   };
 
@@ -586,12 +587,11 @@ export default function App() {
       }) : <Empty title="Sin pagos registrados" subtitle="Agrega servicios, préstamos, tarjetas o cualquier deuda con su fecha límite." />}
     </Card>
     <Text style={styles.helperText}>Al marcar un pago como pagado, se registra automáticamente como gasto para actualizar tu saldo. No se registra dos veces.</Text>
-    <SectionTitle>Ajustes de moneda y meta</SectionTitle>
+    <SectionTitle>Ajustes de moneda</SectionTitle>
     <Card>
       <Field label="Tipo de cambio (1 USD = MXN)" value={rateInput} onChangeText={setRateInput} keyboardType="decimal-pad" placeholder="17.50" />
-      <Field label="Meta de ahorro (MXN)" value={goalInput} onChangeText={setGoalInput} keyboardType="decimal-pad" placeholder="10000" />
       <Button title="Guardar ajustes" onPress={saveSettings} />
-      <Text style={styles.helperText}>El tipo de cambio es editable y se aplica a todos tus movimientos en USD. No se actualiza automáticamente por Internet.</Text>
+      <Text style={styles.helperText}>El tipo de cambio es editable y se aplica a todos tus movimientos en USD. No se actualiza automáticamente por Internet. Tus metas se administran arriba, en Mis metas de ahorro.</Text>
     </Card>
   </ScrollView>;
 
