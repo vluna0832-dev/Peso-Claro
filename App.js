@@ -421,7 +421,7 @@ export default function App() {
   const remainingFoodBudget = Math.max(0, foodBudget - foodSpentThisMonth);
   const recipeLimit = recipeLimitInput.trim() === '' ? null : Math.max(0, Number(recipeLimitInput.replace(',', '.')) || 0);
   const servings = Math.max(1, Math.min(5, Number.parseInt(recipeServings, 10) || 2));
-  const normalizeRecipeText = value => String(value || '').toLocaleLowerCase('es-MX').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalizeRecipeText = value => String(value || '').toLocaleLowerCase('es-MX').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
   const quantityForIngredient = (ingredient, count) => {
     const v = normalizeRecipeText(ingredient);
     const qty = (n) => Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
