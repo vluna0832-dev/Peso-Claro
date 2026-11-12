@@ -428,7 +428,7 @@ export default function App() {
     if (/crema|mayonesa|mostaza|mantequilla/.test(v)) return `${qty(count)} cucharada(s)`;
     if (/leche|caldo|agua/.test(v)) return `${qty(count * 0.5)} taza(s)`;
     if (/masa de maiz|harina|avena|pan molido/.test(v)) return `${qty(count * 0.25)} taza(s)`;
-    if (/jitomate|tomatillo|tomate|zanahoria|cebolla|limon|naranja|pepino|elote|coliflor|brocoli|col |apio|jicama|guayaba|piña|piña|rabano/.test(v)) return `${qty(count * 0.5)} taza(s) o pieza(s) al gusto`;
+    if (/jitomate|tomatillo|tomate|zanahoria|cebolla|limon|naranja|pepino|elote|coliflor|brocoli|col |apio|jicama|guayaba|pina|rabano/.test(v)) return `${qty(count * 0.5)} taza(s) o pieza(s) al gusto`;
     return 'al gusto';
   };
   const ingredientAliases = {
@@ -456,7 +456,7 @@ export default function App() {
     const missingIngredients = r.ingredients.filter(ingredient => !leftoverTerms.some(term => ingredientMatches(ingredient, term)));
     const searchMatch = !searchTerm || normalizeRecipeText(r.name).includes(searchTerm) || r.ingredients.some(x => normalizeRecipeText(x).includes(searchTerm));
     return { ...r, matchedIngredients, missingIngredients, matchedCount: matchedIngredients.length, searchMatch };
-  }).filter(r => r.searchMatch && (recipeLimit === null || r.cost * servings / 2 <= recipeLimit))
+  }).filter(r => r.searchMatch && (recipeLimit === null || r.cost * servings / 2 <= recipeLimit) && (!leftoverTerms.length || !!searchTerm || r.matchedCount > 0))
     .sort((a, b) => {
       if (!leftoverTerms.length) return a.name.localeCompare(b.name, 'es-MX');
       return b.matchedCount - a.matchedCount || a.missingIngredients.length - b.missingIngredients.length || a.name.localeCompare(b.name, 'es-MX');
