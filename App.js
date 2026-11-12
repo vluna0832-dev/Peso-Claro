@@ -116,6 +116,9 @@ export default function App() {
   const [leftoverInput, setLeftoverInput] = useState('');
   const [recipeLimitInput, setRecipeLimitInput] = useState('');
   const [recipeServings, setRecipeServings] = useState('2');
+  const [onlineRecipes, setOnlineRecipes] = useState([]);
+  const [recipeLoading, setRecipeLoading] = useState(false);
+  const [recipeError, setRecipeError] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -235,6 +238,90 @@ export default function App() {
     { text: 'Cancelar', style: 'cancel' },
     { text: 'Eliminar', style: 'destructive', onPress: () => setData(prev => ({ ...prev, payments: (prev.payments || []).filter(p => p.id !== id) })) }
   ]);
+
+  const searchOnlineRecipes = async () => {
+    const rawIngredients = leftoverInput.split(',').map(x => x.trim()).filter(Boolean);
+    const nameQuery = recipeSearch.trim();
+    if (!rawIngredients.length && !nameQuery) {
+      setRecipeError('Escribe al menos un ingrediente o el nombre de una receta.');
+      setOnlineRecipes([]);
+      return;
+    }
+    const ingredientNames = {
+      jitomate: 'tomato', tomate: 'tomato', cebolla: 'onion', ajo: 'garlic',
+      papa: 'potato', patata: 'potato', pollo: 'chicken', huevo: 'egg',
+      huevos: 'egg', arroz: 'rice', zanahoria: 'carrot', queso: 'cheese',
+      leche: 'milk', pasta: 'pasta', fideo: 'vermicelli', frijoles: 'kidney beans',
+      frijol: 'kidney beans', atun: 'tuna', atún: 'tuna', pescado: 'fish',
+      carne: 'beef', res: 'beef', cerdo: 'pork', puerco: 'pork',
+      jamon: 'ham', jamón: 'ham', salchicha: 'sausage', chorizo: 'chorizo',
+      elote: 'sweetcorn', maiz: 'sweetcorn', maíz: 'sweetcorn',
+      calabacita: 'courgette', calabaza: 'pumpkin', pepino: 'cucumber',
+      lechuga: 'lettuce', espinaca: 'spinach', brocoli: 'broccoli',
+      brócoli: 'broccoli', champiñon: 'mushrooms', champiñones: 'mushrooms',
+      aguacate: 'avocado', limon: 'lime', limón: 'lime', platano: 'banana',
+      plátano: 'banana', avena: 'oats', pan: 'bread', tortilla: 'tortillas',
+      tortillas: 'tortillas'
+    };
+    const normalize = value => value.toLocaleLowerCase('es-MX').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').trim();
+    const ingredients = rawIngredients.map(item => ingredientNames[normalize(item)] || normalize(item).replace(/\\s+/g, '_'));
+    setRecipeLoading(true);
+    setRecipeError('');
+    setOnlineRecipes([]);
+    try {
+      const base = 'https://www.themealdb.com/api/json/v1/1';
+      let candidates = [];
+      if (nameQuery) {
+        const response = await fetch(base + '/search.php?s=' + encodeURIComponent(nameQuery));
+        if (!response.ok) throw new Error('No se pudo conectar con el buscador.');
+        const json = await response.json();
+        candidates = json.meals || [];
+      } else {
+        const response = await fetch(base + '/filter.php?i=' + encodeURIComponent(ingredients[0]));
+        if (!response.ok) throw new Error('No se pudo consultar el catálogo de recetas.');
+        const json = await response.json();
+        const summaries = (json.meals || []).slice(0, 12);
+        const details = await Promise.all(summaries.map(async meal => {
+          const detailResponse = await fetch(base + '/lookup.php?i=' + meal.idMeal);
+          if (!detailResponse.ok) return null;
+          const detailJson = await detailResponse.json();
+          return detailJson.meals && detailJson.meals[0] ? detailJson.meals[0] : null;
+        }));
+        candidates = details.filter(Boolean);
+      }
+      const results = candidates.map(meal => {
+        const mealIngredients = [];
+        const measures = [];
+        for (let i = 1; i <= 20; i++) {
+          const ingredient = meal['strIngredient' + i];
+          const measure = meal['strMeasure' + i];
+          if (ingredient && ingredient.trim()) {
+            mealIngredients.push(ingredient.trim());
+            measures.push(((measure || '').trim() + ' ' + ingredient.trim()).trim());
+          }
+        }
+        const normalizedMealIngredients = mealIngredients.map(normalize);
+        const matched = ingredients.filter(term => normalizedMealIngredients.some(item => item.includes(term.replace(/_/g, ' ')) || term.replace(/_/g, ' ').includes(item)));
+        return {
+          id: meal.idMeal,
+          name: meal.strMeal,
+          ingredients: measures,
+          steps: meal.strInstructions || 'Consulta la preparación en la página original.',
+          time: 'Tiempo no indicado',
+          cost: null,
+          image: meal.strMealThumb,
+          source: meal.strSource || 'https://www.themealdb.com',
+          matchedCount: matched.length
+        };
+      }).sort((a, b) => b.matchedCount - a.matchedCount);
+      setOnlineRecipes(results);
+      if (!results.length) setRecipeError('No encontramos recetas con esa búsqueda. Prueba con otro ingrediente o escribe su nombre en inglés.');
+    } catch (error) {
+      setRecipeError('No pudimos conectar con las recetas de Internet. Revisa tu conexión e inténtalo de nuevo.');
+    } finally {
+      setRecipeLoading(false);
+    }
+  };
 
   const paymentStatus = (date, paid) => {
     if (paid) return 'Pagado';
@@ -390,7 +477,10 @@ export default function App() {
     <Card>
       <Text style={styles.muted}>Escribe ingredientes separados por comas. Ejemplo: arroz, pollo, papa, jitomate.</Text>
       <TextInput value={leftoverInput} onChangeText={setLeftoverInput} placeholder="¿Qué hay en tu refri o despensa?" placeholderTextColor="#9AA6AE" style={[styles.input, { marginTop: 10 }]} />
-      <Text style={styles.helperText}>Te mostraremos recetas que aprovechen al menos uno de esos ingredientes. Si lo dejas vacío, verás todas.</Text>
+      <Text style={styles.helperText}>Escribe uno o varios ingredientes separados por comas y pulsa el botón para buscar recetas en Internet.</Text>
+      <Button title={recipeLoading ? 'Buscando recetas…' : 'Buscar recetas en Internet'} onPress={searchOnlineRecipes} style={{ marginTop: 12 }} />
+      {recipeError ? <Text style={[styles.helperText, { color: COLORS.red, marginTop: 9 }]}>{recipeError}</Text> : null}
+      {onlineRecipes.length ? <Text style={styles.helperText}>Encontramos {onlineRecipes.length} recetas en línea. Esta búsqueda necesita Internet.</Text> : null}
     </Card>
     <SectionTitle>Personaliza tu búsqueda</SectionTitle>
     <Card>
@@ -411,7 +501,8 @@ export default function App() {
         <Text style={styles.link}>Limpiar filtros</Text>
       </TouchableOpacity>
     </Card>
-    <SectionTitle>{availableRecipes.length} recetas encontradas</SectionTitle>
+    {onlineRecipes.length ? <><SectionTitle>{onlineRecipes.length} recetas de Internet</SectionTitle>{onlineRecipes.map(r => <TouchableOpacity key={'online-' + r.id} activeOpacity={0.85} onPress={() => setSelectedRecipe(r)}><Card style={styles.recipeCard}><View style={styles.recipeEmoji}><Text style={{ fontSize: 25 }}>🌐</Text></View><View style={{ flex: 1 }}><Text style={styles.recipeName}>{r.name}</Text><Text style={styles.recipeMeta}>{r.matchedCount ? r.matchedCount + ' ingredientes coinciden' : 'Resultado de búsqueda'} · Internet</Text><Text style={styles.recipeCost}>Costo no disponible</Text></View><Text style={styles.chevron}>›</Text></Card></TouchableOpacity>)}</> : null}
+    <SectionTitle>{availableRecipes.length} recetas del catálogo</SectionTitle>
     {availableRecipes.length ? availableRecipes.map((r, i) => <TouchableOpacity key={r.name} activeOpacity={0.85} onPress={() => setSelectedRecipe(r)}>
       <Card style={styles.recipeCard}><View style={styles.recipeEmoji}><Text style={{ fontSize: 25 }}>{['🍚','🫘','🍝','🥣','🧀','🥕','🥒','🍲'][i % 8]}</Text></View>
         <View style={{ flex: 1 }}><Text style={styles.recipeName}>{r.name}</Text><Text style={styles.recipeMeta}>{r.time} · para {servings} {servings === 1 ? 'persona' : 'personas'}</Text><Text style={styles.recipeCost}>{money(r.displayCost)} aprox.</Text></View><Text style={styles.chevron}>›</Text></Card>
@@ -487,10 +578,11 @@ export default function App() {
         <TouchableOpacity style={styles.recipeClose} onPress={() => setSelectedRecipe(null)}><Text style={styles.closeText}>×</Text></TouchableOpacity>
         {selectedRecipe && <>
           <Text style={styles.recipeModalTitle}>{selectedRecipe.name}</Text>
-          <Text style={styles.recipeCost}>{money(selectedRecipe.displayCost || selectedRecipe.cost)} aprox. · {selectedRecipe.time}</Text>
+          {selectedRecipe.cost == null ? <Text style={styles.recipeMeta}>{selectedRecipe.time} · Costo no disponible</Text> : <Text style={styles.recipeCost}>{money(selectedRecipe.displayCost || selectedRecipe.cost)} aprox. · {selectedRecipe.time}</Text>}
           <Text style={styles.recipeDetailHeading}>Ingredientes sugeridos</Text><Text style={styles.recipeDetail}>{selectedRecipe.ingredients.join(', ')}</Text>
           <Text style={styles.recipeDetailHeading}>Porciones</Text><Text style={styles.recipeDetail}>{servings} {servings === 1 ? 'persona' : 'personas'}. Ajusta las cantidades al cocinar.</Text>
           <Text style={styles.recipeDetailHeading}>Preparación</Text><Text style={styles.recipeDetail}>{selectedRecipe.steps}</Text>
+          {selectedRecipe.source ? <Text style={styles.helperText}>Receta consultada en TheMealDB. Algunas recetas pueden aparecer en inglés.</Text> : null}
           <Button title="Cerrar" onPress={() => setSelectedRecipe(null)} style={{ marginTop: 20 }} />
         </>}
       </View></View>
