@@ -109,6 +109,11 @@ export default function App() {
   const [savingInput, setSavingInput] = useState('');
   const [savingConcept, setSavingConcept] = useState('');
   const [editingSavingId, setEditingSavingId] = useState(null);
+  const [selectedSavingGoalId, setSelectedSavingGoalId] = useState('legacy-main');
+  const [savingGoalModal, setSavingGoalModal] = useState(false);
+  const [savingGoalName, setSavingGoalName] = useState('');
+  const [savingGoalTarget, setSavingGoalTarget] = useState('');
+  const [editingSavingGoalId, setEditingSavingGoalId] = useState(null);
   const [rateInput, setRateInput] = useState('17.50');
   const [goalInput, setGoalInput] = useState('10000');
   const [foodInput, setFoodInput] = useState('1500');
@@ -126,7 +131,12 @@ export default function App() {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = { ...DEFAULT_DATA, ...JSON.parse(raw) };
+          if (!Array.isArray(parsed.savingGoals) || !parsed.savingGoals.length) {
+            parsed.savingGoals = [{ id: 'legacy-main', name: 'Meta de ahorro', target: Number(parsed.savingsGoal) || 10000, saved: Number(parsed.savings) || 0 }];
+            parsed.savingsEntries = (parsed.savingsEntries || []).map(item => ({ ...item, goalId: item.goalId || 'legacy-main' }));
+          }
           setData(parsed);
+          setSelectedSavingGoalId(parsed.savingGoals[0]?.id || 'legacy-main');
           setRateInput(String(parsed.exchangeRate));
           setGoalInput(String(parsed.savingsGoal));
           setFoodInput(String(parsed.foodBudget));
@@ -173,27 +183,80 @@ export default function App() {
     const value = Number(savingInput.replace(',', '.'));
     if (!savingConcept.trim()) return Alert.alert('Falta el concepto', 'Escribe para qué es este ahorro.');
     if (!Number.isFinite(value) || value <= 0) return Alert.alert('Monto no válido', 'Escribe una cantidad mayor que cero.');
+    const goalId = editingSavingId
+      ? ((data.savingsEntries || []).find(item => item.id === editingSavingId)?.goalId || selectedSavingGoalId)
+      : selectedSavingGoalId;
+    const goal = (data.savingGoals || []).find(item => item.id === goalId);
+    if (!goal) return Alert.alert('Selecciona una meta', 'Elige a qué meta quieres agregar este ahorro.');
     if (editingSavingId) {
       const previous = (data.savingsEntries || []).find(item => item.id === editingSavingId);
       if (!previous) return;
       const difference = value - Number(previous.amount || 0);
       if (difference > totals.balance) return Alert.alert('Saldo insuficiente', 'No hay saldo disponible para aumentar ese ahorro.');
-      setData(prev => ({ ...prev, savings: Math.max(0, Number(prev.savings || 0) + difference),
-        savingsEntries: (prev.savingsEntries || []).map(item => item.id === editingSavingId ? { ...item, concept: savingConcept.trim(), amount: value } : item) }));
+      setData(prev => ({
+        ...prev,
+        savings: Math.max(0, Number(prev.savings || 0) + difference),
+        savingGoals: (prev.savingGoals || []).map(item => item.id === goalId ? { ...item, saved: Math.max(0, Number(item.saved || 0) + difference) } : item),
+        savingsEntries: (prev.savingsEntries || []).map(item => item.id === editingSavingId ? { ...item, concept: savingConcept.trim(), amount: value } : item)
+      }));
       Alert.alert('Ahorro actualizado', 'Se guardaron los cambios.');
     } else {
       if (value > totals.balance) return Alert.alert('Saldo insuficiente', 'El ahorro no puede superar tu saldo disponible.');
-      const item = { id: String(Date.now()), concept: savingConcept.trim(), amount: value, date: todayISO() };
-      setData(prev => ({ ...prev, savings: Number(prev.savings || 0) + value, savingsEntries: [item, ...(prev.savingsEntries || [])] }));
-      Alert.alert('¡Ahorro agregado!', `Se sumaron ${money(value)} a tu ahorro.`);
+      const item = { id: String(Date.now()), concept: savingConcept.trim(), amount: value, date: todayISO(), goalId };
+      setData(prev => ({
+        ...prev,
+        savings: Number(prev.savings || 0) + value,
+        savingGoals: (prev.savingGoals || []).map(g => g.id === goalId ? { ...g, saved: Number(g.saved || 0) + value } : g),
+        savingsEntries: [item, ...(prev.savingsEntries || [])]
+      }));
+      Alert.alert('¡Ahorro agregado!', `Se sumaron ${money(value)} a "${goal.name}".`);
     }
     setSavingInput(''); setSavingConcept(''); setEditingSavingId(null);
   };
-  const editSaving = (item) => { setEditingSavingId(item.id); setSavingConcept(item.concept); setSavingInput(String(item.amount)); };
+  const editSaving = (item) => {
+    setEditingSavingId(item.id); setSavingConcept(item.concept); setSavingInput(String(item.amount));
+    if (item.goalId) setSelectedSavingGoalId(item.goalId);
+  };
   const deleteSaving = (item) => Alert.alert('Eliminar ahorro', `¿Quieres eliminar "${item.concept}" y restar ${money(item.amount)} del total ahorrado?`, [
     { text: 'Cancelar', style: 'cancel' },
-    { text: 'Eliminar', style: 'destructive', onPress: () => setData(prev => ({ ...prev, savings: Math.max(0, Number(prev.savings || 0) - Number(item.amount || 0)), savingsEntries: (prev.savingsEntries || []).filter(entry => entry.id !== item.id) })) }
+    { text: 'Eliminar', style: 'destructive', onPress: () => setData(prev => ({
+      ...prev,
+      savings: Math.max(0, Number(prev.savings || 0) - Number(item.amount || 0)),
+      savingGoals: (prev.savingGoals || []).map(g => g.id === (item.goalId || 'legacy-main') ? { ...g, saved: Math.max(0, Number(g.saved || 0) - Number(item.amount || 0)) } : g),
+      savingsEntries: (prev.savingsEntries || []).filter(entry => entry.id !== item.id)
+    })) }
   ]);
+  const openSavingGoal = (goal) => {
+    setEditingSavingGoalId(goal?.id || null);
+    setSavingGoalName(goal?.name || '');
+    setSavingGoalTarget(String(goal?.target || ''));
+    setSavingGoalModal(true);
+  };
+  const saveSavingGoal = () => {
+    const target = Number(savingGoalTarget.replace(',', '.'));
+    if (!savingGoalName.trim()) return Alert.alert('Falta el nombre', 'Escribe un nombre para tu meta.');
+    if (!Number.isFinite(target) || target <= 0) return Alert.alert('Cantidad no válida', 'El objetivo debe ser mayor que cero.');
+    if (editingSavingGoalId) {
+      setData(prev => ({ ...prev, savingGoals: (prev.savingGoals || []).map(g => g.id === editingSavingGoalId ? { ...g, name: savingGoalName.trim(), target } : g) }));
+    } else {
+      const goal = { id: `goal-${Date.now()}`, name: savingGoalName.trim(), target, saved: 0 };
+      setData(prev => ({ ...prev, savingGoals: [...(prev.savingGoals || []), goal] }));
+      setSelectedSavingGoalId(goal.id);
+    }
+    setSavingGoalModal(false); setSavingGoalName(''); setSavingGoalTarget(''); setEditingSavingGoalId(null);
+  };
+  const deleteSavingGoal = (goal) => {
+    if (Number(goal.saved || 0) > 0) return Alert.alert('Meta con ahorro', 'Primero mueve o retira los ahorros asociados antes de eliminar esta meta. Así no se pierde tu dinero registrado.');
+    if ((data.savingGoals || []).length <= 1) return Alert.alert('Necesitas una meta', 'Conserva al menos una meta de ahorro.');
+    Alert.alert('Eliminar meta', `¿Quieres eliminar la meta "${goal.name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: () => {
+        const next = data.savingGoals.filter(g => g.id !== goal.id);
+        setData(prev => ({ ...prev, savingGoals: next }));
+        if (selectedSavingGoalId === goal.id) setSelectedSavingGoalId(next[0].id);
+      } }
+    ]);
+  };
   const saveSettings = () => {
     const r = Number(rateInput.replace(',', '.'));
     const g = Number(goalInput.replace(',', '.'));
@@ -431,14 +494,29 @@ export default function App() {
 
   const renderBudget = () => <ScrollView contentContainerStyle={styles.page}>
     <Header subtitle="Organiza tus metas y tu dinero" />
-    <Card style={styles.goalCard}>
-      <Text style={styles.goalEyebrow}>META DE AHORRO</Text><Text style={styles.goalAmount}>{money(data.savings)}</Text>
-      <Text style={styles.goalSub}>de {money(data.savingsGoal)}</Text>
-      <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress * 100}%` }]} /></View>
-      <View style={styles.rowBetween}><Text style={styles.goalPercent}>{Math.round(progress * 100)}% completado</Text><Text style={styles.goalPercent}>{money(Math.max(0, Number(data.savingsGoal) - Number(data.savings)))} restantes</Text></View>
-    </Card>
-    <SectionTitle>Sumar a mi ahorro</SectionTitle>
+    <SectionTitle>Mis metas de ahorro</SectionTitle>
+    {(data.savingGoals || []).map(goal => {
+      const saved = Number(goal.saved || 0), target = Number(goal.target || 0);
+      const pct = target > 0 ? Math.min(1, saved / target) : 0;
+      return <Card key={goal.id} style={styles.goalCard}>
+        <View style={styles.rowBetween}><Text style={styles.goalEyebrow}>{goal.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => openSavingGoal(goal)} style={styles.paidButton}><Text style={styles.paidButtonText}>Editar</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => deleteSavingGoal(goal)} style={styles.deleteHit}><Text style={styles.deleteText}>×</Text></TouchableOpacity>
+          </View>
+        </View>
+        <Text style={styles.goalAmount}>{money(saved)}</Text><Text style={styles.goalSub}>Objetivo: {money(target)}</Text>
+        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${pct * 100}%` }]} /></View>
+        <View style={styles.rowBetween}><Text style={styles.goalPercent}>{Math.round(pct * 100)}% completado</Text><Text style={styles.goalPercent}>{money(Math.max(0, target - saved))} restantes</Text></View>
+      </Card>;
+    })}
+    <Button title="+ Crear otra meta" onPress={() => openSavingGoal(null)} variant="secondary" />
+    <SectionTitle>Sumar a una meta</SectionTitle>
     <Card><Text style={styles.muted}>Saldo disponible: <Text style={styles.bold}>{money(totals.balance)}</Text></Text>
+      <Text style={styles.fieldLabel}>¿A qué meta quieres agregar dinero?</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+        {(data.savingGoals || []).map(g => <TouchableOpacity key={g.id} onPress={() => setSelectedSavingGoalId(g.id)} style={[styles.segment, selectedSavingGoalId === g.id && styles.segmentActive]}><Text style={[styles.segmentText, selectedSavingGoalId === g.id && styles.segmentTextActive]}>{g.name}</Text></TouchableOpacity>)}
+      </View>
       <Field label="Nombre o concepto del ahorro" value={savingConcept} onChangeText={setSavingConcept} placeholder="Ej. Emergencias, vacaciones, carro…" />
       <Field label="Cantidad en MXN" value={savingInput} onChangeText={setSavingInput} placeholder="Ej. 200" keyboardType="decimal-pad" />
       <Button title={editingSavingId ? "Guardar cambios" : "Agregar a mi ahorro"} onPress={addSaving} />
@@ -595,6 +673,16 @@ export default function App() {
           <Button title="Guardar pago o deuda" onPress={addPayment} style={{ marginTop: 14 }} />
         </View>
       </KeyboardAvoidingView>
+    </Modal>
+
+    <Modal visible={savingGoalModal} transparent animationType="fade" onRequestClose={() => setSavingGoalModal(false)}>
+      <View style={styles.modalBackdrop}><View style={styles.recipeModal}>
+        <Text style={styles.recipeModalTitle}>{editingSavingGoalId ? 'Editar meta' : 'Nueva meta de ahorro'}</Text>
+        <Field label="Nombre de la meta" value={savingGoalName} onChangeText={setSavingGoalName} placeholder="Ej. Viaje, emergencias, auto" />
+        <Field label="Cantidad objetivo en MXN" value={savingGoalTarget} onChangeText={setSavingGoalTarget} keyboardType="decimal-pad" placeholder="Ej. 15000" />
+        <Button title="Guardar meta" onPress={saveSavingGoal} style={{ marginTop: 14 }} />
+        <Button title="Cancelar" variant="ghost" onPress={() => setSavingGoalModal(false)} />
+      </View></View>
     </Modal>
 
     <Modal visible={!!selectedRecipe} transparent animationType="fade" onRequestClose={() => setSelectedRecipe(null)}>
