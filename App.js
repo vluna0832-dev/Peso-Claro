@@ -107,6 +107,8 @@ export default function App() {
   const [currency, setCurrency] = useState('MXN');
   const [filter, setFilter] = useState('Todos');
   const [savingInput, setSavingInput] = useState('');
+  const [savingConcept, setSavingConcept] = useState('');
+  const [editingSavingId, setEditingSavingId] = useState(null);
   const [rateInput, setRateInput] = useState('17.50');
   const [goalInput, setGoalInput] = useState('10000');
   const [foodInput, setFoodInput] = useState('1500');
@@ -160,12 +162,29 @@ export default function App() {
   ]);
   const addSaving = () => {
     const value = Number(savingInput.replace(',', '.'));
+    if (!savingConcept.trim()) return Alert.alert('Falta el concepto', 'Escribe para qué es este ahorro.');
     if (!Number.isFinite(value) || value <= 0) return Alert.alert('Monto no válido', 'Escribe una cantidad mayor que cero.');
-    if (value > totals.balance) return Alert.alert('Saldo insuficiente', 'El ahorro no puede superar tu saldo disponible.');
-    setData(prev => ({ ...prev, savings: Number(prev.savings || 0) + value }));
-    setSavingInput('');
-    Alert.alert('¡Ahorro agregado!', `Se sumaron ${money(value)} a tu ahorro.`);
+    if (editingSavingId) {
+      const previous = (data.savingsEntries || []).find(item => item.id === editingSavingId);
+      if (!previous) return;
+      const difference = value - Number(previous.amount || 0);
+      if (difference > totals.balance) return Alert.alert('Saldo insuficiente', 'No hay saldo disponible para aumentar ese ahorro.');
+      setData(prev => ({ ...prev, savings: Math.max(0, Number(prev.savings || 0) + difference),
+        savingsEntries: (prev.savingsEntries || []).map(item => item.id === editingSavingId ? { ...item, concept: savingConcept.trim(), amount: value } : item) }));
+      Alert.alert('Ahorro actualizado', 'Se guardaron los cambios.');
+    } else {
+      if (value > totals.balance) return Alert.alert('Saldo insuficiente', 'El ahorro no puede superar tu saldo disponible.');
+      const item = { id: String(Date.now()), concept: savingConcept.trim(), amount: value, date: todayISO() };
+      setData(prev => ({ ...prev, savings: Number(prev.savings || 0) + value, savingsEntries: [item, ...(prev.savingsEntries || [])] }));
+      Alert.alert('¡Ahorro agregado!', `Se sumaron ${money(value)} a tu ahorro.`);
+    }
+    setSavingInput(''); setSavingConcept(''); setEditingSavingId(null);
   };
+  const editSaving = (item) => { setEditingSavingId(item.id); setSavingConcept(item.concept); setSavingInput(String(item.amount)); };
+  const deleteSaving = (item) => Alert.alert('Eliminar ahorro', `¿Quieres eliminar "${item.concept}" y restar ${money(item.amount)} del total ahorrado?`, [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: 'Eliminar', style: 'destructive', onPress: () => setData(prev => ({ ...prev, savings: Math.max(0, Number(prev.savings || 0) - Number(item.amount || 0)), savingsEntries: (prev.savingsEntries || []).filter(entry => entry.id !== item.id) })) }
+  ]);
   const saveSettings = () => {
     const r = Number(rateInput.replace(',', '.'));
     const g = Number(goalInput.replace(',', '.'));
@@ -302,8 +321,20 @@ export default function App() {
     </Card>
     <SectionTitle>Sumar a mi ahorro</SectionTitle>
     <Card><Text style={styles.muted}>Saldo disponible: <Text style={styles.bold}>{money(totals.balance)}</Text></Text>
+      <Field label="Nombre o concepto del ahorro" value={savingConcept} onChangeText={setSavingConcept} placeholder="Ej. Emergencias, vacaciones, carro…" />
       <Field label="Cantidad en MXN" value={savingInput} onChangeText={setSavingInput} placeholder="Ej. 200" keyboardType="decimal-pad" />
-      <Button title="Guardar ahorro" onPress={addSaving} /></Card>
+      <Button title={editingSavingId ? "Guardar cambios" : "Agregar a mi ahorro"} onPress={addSaving} />
+      {editingSavingId ? <Button title="Cancelar edición" variant="ghost" onPress={() => { setEditingSavingId(null); setSavingConcept(''); setSavingInput(''); }} /> : null}
+    </Card>
+    <SectionTitle>Mis ahorros</SectionTitle>
+    <Card style={{ paddingHorizontal: 14 }}>
+      {(data.savingsEntries || []).length ? (data.savingsEntries || []).map(item => <View key={item.id} style={styles.paymentRow}>
+        <View style={{ flex: 1 }}><Text style={styles.transactionTitle}>{item.concept}</Text><Text style={styles.transactionMeta}>{dateLabel(item.date)}</Text></View>
+        <Text style={styles.transactionAmount}>{money(item.amount)}</Text>
+        <TouchableOpacity onPress={() => editSaving(item)} style={styles.paidButton}><Text style={styles.paidButtonText}>Editar</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => deleteSaving(item)} style={styles.deleteHit}><Text style={styles.deleteText}>×</Text></TouchableOpacity>
+      </View>) : <Empty title="Aún no tienes ahorros individuales" subtitle="Agrega uno con nombre y cantidad para llevar el control." />}
+    </Card>
     <SectionTitle>Presupuesto de comida</SectionTitle>
     <Card><Text style={styles.muted}>Cantidad disponible para preparar comidas económicas.</Text>
       <Field label="Presupuesto en MXN" value={foodInput} onChangeText={setFoodInput} keyboardType="decimal-pad" placeholder="1500" />
