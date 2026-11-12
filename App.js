@@ -71,6 +71,29 @@ function TransactionRow({ item, rate, onDelete }) {
   </View>;
 }
 
+const RECIPE_CATALOG = [
+  { name: 'Arroz con huevo y verduras', cost: 48, time: '20 min', ingredients: ['arroz','huevo','zanahoria','calabacita'], steps: 'Cuece el arroz. Saltea las verduras picadas, agrega el huevo y sirve.' },
+  { name: 'Tostadas de frijoles', cost: 42, time: '15 min', ingredients: ['tostadas','frijoles','lechuga','jitomate','queso'], steps: 'Calienta los frijoles, úntalos en las tostadas y agrega lechuga, jitomate y queso.' },
+  { name: 'Pasta roja sencilla', cost: 55, time: '25 min', ingredients: ['pasta','jitomate','cebolla','ajo'], steps: 'Cuece la pasta. Licúa jitomate, cebolla y ajo; cocina la salsa y mezcla.' },
+  { name: 'Avena con plátano', cost: 25, time: '10 min', ingredients: ['avena','leche','plátano'], steps: 'Calienta la avena con leche o agua y termina con plátano en rodajas.' },
+  { name: 'Quesadillas de papa', cost: 38, time: '25 min', ingredients: ['tortillas','papa','queso'], steps: 'Cuece y machaca la papa. Rellena las tortillas con papa y queso y dóralas.' },
+  { name: 'Lentejas guisadas', cost: 50, time: '35 min', ingredients: ['lentejas','zanahoria','jitomate','cebolla'], steps: 'Cuece las lentejas. Agrega verduras picadas y cocina hasta que estén suaves.' },
+  { name: 'Calabacitas con elote', cost: 44, time: '20 min', ingredients: ['calabacita','elote','cebolla','jitomate'], steps: 'Sofríe cebolla y jitomate, agrega calabacita y elote; tapa hasta suavizar.' },
+  { name: 'Sopa de verduras', cost: 40, time: '30 min', ingredients: ['zanahoria','papa','calabacita','chayote','fideo'], steps: 'Pica las verduras, sofríelas ligeramente, agrega agua y cocina hasta suavizar.' },
+  { name: 'Tacos de papa', cost: 36, time: '25 min', ingredients: ['tortillas','papa','lechuga','salsa'], steps: 'Cuece y machaca la papa. Rellena tortillas, dóralas y acompaña con lechuga y salsa.' },
+  { name: 'Enfrijoladas', cost: 46, time: '20 min', ingredients: ['tortillas','frijoles','queso','cebolla'], steps: 'Licúa frijoles con un poco de agua, calienta la salsa y baña las tortillas. Agrega queso y cebolla.' },
+  { name: 'Arroz a la mexicana', cost: 32, time: '25 min', ingredients: ['arroz','jitomate','zanahoria','chícharos','cebolla'], steps: 'Dora el arroz, añade jitomate licuado y verduras. Agrega agua y cocina tapado.' },
+  { name: 'Omelette de verduras', cost: 39, time: '12 min', ingredients: ['huevo','jitomate','cebolla','espinaca','queso'], steps: 'Bate los huevos, vierte en sartén y agrega verduras y queso. Dobla cuando cuaje.' },
+  { name: 'Tortitas de atún', cost: 58, time: '20 min', ingredients: ['atún','huevo','avena','cebolla'], steps: 'Mezcla atún escurrido con huevo, avena y cebolla. Forma tortitas y dóralas.' },
+  { name: 'Papas con chorizo', cost: 52, time: '25 min', ingredients: ['papa','chorizo','cebolla','tortillas'], steps: 'Cuece las papas en cubos. Dora el chorizo con cebolla, agrega papa y mezcla.' },
+  { name: 'Sincronizadas', cost: 49, time: '10 min', ingredients: ['tortillas','jamón','queso'], steps: 'Coloca jamón y queso entre dos tortillas y calienta por ambos lados.' },
+  { name: 'Ensalada de atún', cost: 55, time: '15 min', ingredients: ['atún','jitomate','pepino','lechuga','limón'], steps: 'Escurre el atún, mezcla con verduras picadas y agrega limón.' },
+  { name: 'Sopa de fideo', cost: 30, time: '20 min', ingredients: ['fideo','jitomate','cebolla','ajo'], steps: 'Dora el fideo. Agrega jitomate licuado con cebolla y ajo, añade agua y cocina.' },
+  { name: 'Molletes económicos', cost: 45, time: '15 min', ingredients: ['bolillo','frijoles','queso','jitomate'], steps: 'Parte el bolillo, unta frijoles, agrega queso y calienta. Acompaña con jitomate.' },
+  { name: 'Plátano con avena', cost: 28, time: '10 min', ingredients: ['plátano','avena','leche','canela'], steps: 'Cocina la avena con leche y canela. Sirve con plátano en rodajas.' },
+  { name: 'Caldo de pollo rendidor', cost: 68, time: '40 min', ingredients: ['pollo','papa','zanahoria','calabacita','arroz'], steps: 'Cuece el pollo. Agrega verduras y arroz; cocina hasta que todo esté suave.' }
+];
+
 export default function App() {
   const [data, setData] = useState(DEFAULT_DATA);
   const [loaded, setLoaded] = useState(false);
@@ -86,6 +109,10 @@ export default function App() {
   const [rateInput, setRateInput] = useState('17.50');
   const [goalInput, setGoalInput] = useState('10000');
   const [foodInput, setFoodInput] = useState('1500');
+  const [recipeSearch, setRecipeSearch] = useState('');
+  const [leftoverInput, setLeftoverInput] = useState('');
+  const [recipeLimitInput, setRecipeLimitInput] = useState('');
+  const [recipeServings, setRecipeServings] = useState('2');
 
   useEffect(() => {
     (async () => {
@@ -192,15 +219,21 @@ export default function App() {
   const filteredTransactions = data.transactions.filter(t => filter === 'Todos' || (filter === 'Ingresos' ? t.type === 'income' : t.type === 'expense'));
   const progress = Math.min(1, (Number(data.savings) || 0) / Math.max(1, Number(data.savingsGoal) || 1));
   const foodBudget = Math.max(0, Number(data.foodBudget) || 0);
-  const recipes = [
-    { name: 'Arroz con huevo y verduras', cost: 48, time: '20 min', ingredients: 'Arroz, 2 huevos, zanahoria y calabacita.', steps: 'Cuece el arroz. Saltea las verduras, agrega el huevo y sirve.' },
-    { name: 'Tostadas de frijoles', cost: 42, time: '15 min', ingredients: 'Tostadas, frijoles, lechuga, jitomate y queso.', steps: 'Calienta los frijoles, úntalos en las tostadas y agrega verduras.' },
-    { name: 'Pasta roja sencilla', cost: 55, time: '25 min', ingredients: 'Pasta, jitomate, cebolla y un poco de aceite.', steps: 'Cuece la pasta. Licúa jitomate con cebolla, cocina la salsa y mezcla.' },
-    { name: 'Avena con plátano', cost: 25, time: '10 min', ingredients: 'Avena, leche o agua y un plátano.', steps: 'Calienta la avena con leche o agua y termina con plátano en rodajas.' },
-    { name: 'Quesadillas de papa', cost: 38, time: '25 min', ingredients: 'Tortillas, papa, queso y salsa al gusto.', steps: 'Cuece y machaca la papa. Rellena las tortillas con papa y queso y dora.' },
-    { name: 'Lentejas guisadas', cost: 50, time: '35 min', ingredients: 'Lentejas, zanahoria, jitomate y cebolla.', steps: 'Cuece las lentejas. Agrega verduras picadas y cocina hasta suavizar.' }
-  ];
-  const availableRecipes = recipes.filter(r => r.cost <= foodBudget);
+  const monthKey = new Date().toISOString().slice(0, 7);
+  const foodSpentThisMonth = data.transactions.reduce((sum, t) => {
+    if (t.type !== 'expense' || t.category !== 'Comida' || String(t.date || '').slice(0, 7) !== monthKey) return sum;
+    return sum + Number(t.amount || 0) * (t.currency === 'USD' ? rate : 1);
+  }, 0);
+  const remainingFoodBudget = Math.max(0, foodBudget - foodSpentThisMonth);
+  const recipeLimit = recipeLimitInput.trim() === '' ? remainingFoodBudget : Math.max(0, Number(recipeLimitInput.replace(',', '.')) || 0);
+  const servings = Math.max(1, Math.min(12, Number.parseInt(recipeServings, 10) || 2));
+  const leftoverTerms = leftoverInput.toLocaleLowerCase('es-MX').split(',').map(x => x.trim()).filter(Boolean);
+  const searchTerm = recipeSearch.trim().toLocaleLowerCase('es-MX');
+  const availableRecipes = RECIPE_CATALOG.filter(r => {
+    const matchesSearch = !searchTerm || r.name.toLocaleLowerCase('es-MX').includes(searchTerm) || r.ingredients.some(x => x.includes(searchTerm));
+    const matchesLeftovers = !leftoverTerms.length || r.ingredients.some(ingredient => leftoverTerms.some(term => ingredient.includes(term) || term.includes(ingredient)));
+    return matchesSearch && matchesLeftovers && r.cost * servings / 2 <= recipeLimit;
+  }).map(r => ({ ...r, displayCost: Math.round(r.cost * servings / 2) }));
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [paymentName, setPaymentName] = useState('');
@@ -308,19 +341,44 @@ export default function App() {
     </Card>
   </ScrollView>;
 
-  const renderRecipes = () => <ScrollView contentContainerStyle={styles.page}>
-    <Header subtitle="Come rico sin gastar de más" />
+  const renderRecipes = () => <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+    <Header subtitle="Aprovecha lo que tienes y cuida tu bolsillo" />
     <Card style={styles.recipeBudget}>
-      <Text style={styles.recipeBudgetLabel}>PRESUPUESTO PARA COMIDA</Text>
-      <Text style={styles.recipeBudgetAmount}>{money(foodBudget)}</Text>
-      <Text style={styles.recipeBudgetHint}>Recetas económicas con costo estimado por preparación.</Text>
+      <Text style={styles.recipeBudgetLabel}>PRESUPUESTO DE COMIDA RESTANTE ESTE MES</Text>
+      <Text style={styles.recipeBudgetAmount}>{money(remainingFoodBudget)}</Text>
+      <Text style={styles.recipeBudgetHint}>Presupuesto: {money(foodBudget)} · Gastos registrados en Comida: {money(foodSpentThisMonth)}</Text>
     </Card>
-    <SectionTitle>Ideas para cocinar</SectionTitle>
+    <SectionTitle>¿Qué tienes o qué te sobró?</SectionTitle>
+    <Card>
+      <Text style={styles.muted}>Escribe ingredientes separados por comas. Ejemplo: arroz, pollo, papa, jitomate.</Text>
+      <TextInput value={leftoverInput} onChangeText={setLeftoverInput} placeholder="¿Qué hay en tu refri o despensa?" placeholderTextColor="#9AA6AE" style={[styles.input, { marginTop: 10 }]} />
+      <Text style={styles.helperText}>Te mostraremos recetas que aprovechen al menos uno de esos ingredientes. Si lo dejas vacío, verás todas.</Text>
+    </Card>
+    <SectionTitle>Personaliza tu búsqueda</SectionTitle>
+    <Card>
+      <Text style={styles.fieldLabel}>Buscar receta o ingrediente</Text>
+      <TextInput value={recipeSearch} onChangeText={setRecipeSearch} placeholder="Ej. pollo, pasta, quesadillas…" placeholderTextColor="#9AA6AE" style={styles.input} />
+      <View style={styles.recipeControls}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.fieldLabel}>¿Para cuántas personas?</Text>
+          <TextInput value={recipeServings} onChangeText={setRecipeServings} keyboardType="number-pad" placeholder="2" placeholderTextColor="#9AA6AE" style={styles.input} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.fieldLabel}>Máximo por receta (MXN)</Text>
+          <TextInput value={recipeLimitInput} onChangeText={setRecipeLimitInput} keyboardType="decimal-pad" placeholder={String(Math.round(remainingFoodBudget))} placeholderTextColor="#9AA6AE" style={styles.input} />
+        </View>
+      </View>
+      <Button title="Usar presupuesto restante" variant="secondary" onPress={() => setRecipeLimitInput(String(Math.round(remainingFoodBudget)))} />
+      <TouchableOpacity onPress={() => { setRecipeSearch(''); setLeftoverInput(''); setRecipeLimitInput(''); setRecipeServings('2'); }} style={{ paddingVertical: 10 }}>
+        <Text style={styles.link}>Limpiar filtros</Text>
+      </TouchableOpacity>
+    </Card>
+    <SectionTitle>{availableRecipes.length} recetas encontradas</SectionTitle>
     {availableRecipes.length ? availableRecipes.map((r, i) => <TouchableOpacity key={r.name} activeOpacity={0.85} onPress={() => setSelectedRecipe(r)}>
-      <Card style={styles.recipeCard}><View style={styles.recipeEmoji}><Text style={{ fontSize: 25 }}>{['🍚','🫘','🍝','🥣','🧀','🥕'][i % 6]}</Text></View>
-        <View style={{ flex: 1 }}><Text style={styles.recipeName}>{r.name}</Text><Text style={styles.recipeMeta}>{r.time} · costo estimado</Text><Text style={styles.recipeCost}>{money(r.cost)}</Text></View><Text style={styles.chevron}>›</Text></Card>
-    </TouchableOpacity>) : <Card><Empty title="Ajusta tu presupuesto" subtitle="No hay recetas dentro de la cantidad indicada. Puedes cambiar tu presupuesto en la pestaña Presupuesto." /></Card>}
-    <Text style={styles.helperText}>Los costos son aproximados y pueden variar según la tienda, la zona y las porciones.</Text>
+      <Card style={styles.recipeCard}><View style={styles.recipeEmoji}><Text style={{ fontSize: 25 }}>{['🍚','🫘','🍝','🥣','🧀','🥕','🥒','🍲'][i % 8]}</Text></View>
+        <View style={{ flex: 1 }}><Text style={styles.recipeName}>{r.name}</Text><Text style={styles.recipeMeta}>{r.time} · para {servings} {servings === 1 ? 'persona' : 'personas'}</Text><Text style={styles.recipeCost}>{money(r.displayCost)} aprox.</Text></View><Text style={styles.chevron}>›</Text></Card>
+    </TouchableOpacity>) : <Card><Empty title="No encontramos recetas con esos filtros" subtitle="Prueba otro ingrediente, aumenta el presupuesto o limpia los filtros para ver más ideas." /></Card>}
+    <Text style={styles.helperText}>Hay {RECIPE_CATALOG.length} recetas en el catálogo. Los costos son estimados y pueden variar por tienda y zona. Los gastos se descuentan del presupuesto cuando registras un movimiento en la categoría Comida.</Text>
   </ScrollView>;
 
   const tabs = [
@@ -386,8 +444,9 @@ export default function App() {
         <TouchableOpacity style={styles.recipeClose} onPress={() => setSelectedRecipe(null)}><Text style={styles.closeText}>×</Text></TouchableOpacity>
         {selectedRecipe && <>
           <Text style={styles.recipeModalTitle}>{selectedRecipe.name}</Text>
-          <Text style={styles.recipeCost}>{money(selectedRecipe.cost)} · {selectedRecipe.time}</Text>
-          <Text style={styles.recipeDetailHeading}>Ingredientes</Text><Text style={styles.recipeDetail}>{selectedRecipe.ingredients}</Text>
+          <Text style={styles.recipeCost}>{money(selectedRecipe.displayCost || selectedRecipe.cost)} aprox. · {selectedRecipe.time}</Text>
+          <Text style={styles.recipeDetailHeading}>Ingredientes sugeridos</Text><Text style={styles.recipeDetail}>{selectedRecipe.ingredients.join(', ')}</Text>
+          <Text style={styles.recipeDetailHeading}>Porciones</Text><Text style={styles.recipeDetail}>{servings} {servings === 1 ? 'persona' : 'personas'}. Ajusta las cantidades al cocinar.</Text>
           <Text style={styles.recipeDetailHeading}>Preparación</Text><Text style={styles.recipeDetail}>{selectedRecipe.steps}</Text>
           <Button title="Cerrar" onPress={() => setSelectedRecipe(null)} style={{ marginTop: 20 }} />
         </>}
@@ -449,6 +508,7 @@ const styles = StyleSheet.create({
   recipeBudget: { backgroundColor: COLORS.greenPale, borderColor: '#D9EDE0' }, recipeBudgetLabel: { color: COLORS.greenDark, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   recipeBudgetAmount: { color: COLORS.navy, fontSize: 29, fontWeight: '900', marginTop: 8 }, recipeBudgetHint: { color: '#567565', fontSize: 11, marginTop: 4 },
   recipeCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  recipeControls: { flexDirection: 'row', gap: 10, marginTop: 12 },
   recipeEmoji: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#F1F5F2', alignItems: 'center', justifyContent: 'center' },
   recipeName: { color: COLORS.navy, fontSize: 13, fontWeight: '900' }, recipeMeta: { color: COLORS.muted, fontSize: 10, marginTop: 4 },
   recipeCost: { color: COLORS.greenDark, fontWeight: '900', fontSize: 14, marginTop: 5 }, chevron: { color: '#9BAAB2', fontSize: 25 },
