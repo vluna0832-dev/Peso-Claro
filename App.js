@@ -413,6 +413,23 @@ export default function App() {
   const recipeLimit = recipeLimitInput.trim() === '' ? null : Math.max(0, Number(recipeLimitInput.replace(',', '.')) || 0);
   const servings = Math.max(1, Math.min(5, Number.parseInt(recipeServings, 10) || 2));
   const normalizeRecipeText = value => String(value || '').toLocaleLowerCase('es-MX').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\\s+/g, ' ').trim();
+  const quantityForIngredient = (ingredient, count) => {
+    const v = normalizeRecipeText(ingredient);
+    const qty = (n) => Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
+    if (/huevo/.test(v)) return `${qty(count)} pieza(s)`;
+    if (/tortilla/.test(v)) return `${qty(count * 2)} pieza(s)`;
+    if (/pollo|pescado|camaron|carne|bistec|cerdo|res |suadero|machaca|tocino|chorizo|salchicha|pavo|panza|chuleta|lomo|sardina|atun|surimi|chicharron/.test(v)) return `${qty(count * 125)} g aprox.`;
+    if (/arroz/.test(v)) return `${qty(count * 0.25)} taza(s)`;
+    if (/pasta|fideo|codito|sopa de letras/.test(v)) return `${qty(count * 75)} g aprox.`;
+    if (/papa|camote|chayote|calabacita|berenjena|pimiento|platano/.test(v)) return `${qty(count)} pieza(s)`;
+    if (/frijol|lenteja|garbanzo|haba|alubia/.test(v)) return `${qty(count * 0.5)} taza(s) cocidas`;
+    if (/queso|requeson|huitlacoche/.test(v)) return `${qty(count * 30)} g aprox.`;
+    if (/crema|mayonesa|mostaza|mantequilla/.test(v)) return `${qty(count)} cucharada(s)`;
+    if (/leche|caldo|agua/.test(v)) return `${qty(count * 0.5)} taza(s)`;
+    if (/masa de maiz|harina|avena|pan molido/.test(v)) return `${qty(count * 0.25)} taza(s)`;
+    if (/jitomate|tomatillo|tomate|zanahoria|cebolla|limon|naranja|pepino|elote|coliflor|brocoli|col |apio|jicama|guayaba|piña|piña|rabano/.test(v)) return `${qty(count * 0.5)} taza(s) o pieza(s) al gusto`;
+    return 'al gusto';
+  };
   const ingredientAliases = {
     jitomate: ['tomate'], tomate: ['jitomate'], papa: ['patata'], patata: ['papa'],
     'carne molida': ['molida de res', 'res molida'], 'molida de res': ['carne molida'],
@@ -700,9 +717,9 @@ export default function App() {
         {selectedRecipe && <>
           <Text style={styles.recipeModalTitle}>{selectedRecipe.name}</Text>
           {selectedRecipe.cost == null ? <Text style={styles.recipeMeta}>{selectedRecipe.time} · Costo no disponible</Text> : <Text style={styles.recipeCost}>{money(selectedRecipe.displayCost || selectedRecipe.cost)} aprox. · {selectedRecipe.time}</Text>}
-          <Text style={styles.recipeDetailHeading}>Ingredientes</Text><Text style={styles.recipeDetail}>{selectedRecipe.ingredients.join(', ')}</Text>
+          <Text style={styles.recipeDetailHeading}>Ingredientes aproximados para {servings} {servings === 1 ? 'persona' : 'personas'}</Text><Text style={styles.recipeDetail}>{selectedRecipe.ingredients.map(ingredient => `• ${quantityForIngredient(ingredient, servings)} de ${ingredient}`).join('\n')}</Text>
           {selectedRecipe.missingIngredients && selectedRecipe.missingIngredients.length ? <><Text style={styles.recipeDetailHeading}>Te hace falta comprar</Text><Text style={styles.recipeDetail}>{selectedRecipe.missingIngredients.join(', ')}</Text></> : <Text style={[styles.helperText, { color: COLORS.greenDark }]}>¡Tienes todo para preparar esta receta!</Text>}
-          <Text style={styles.recipeDetailHeading}>Porciones</Text><Text style={styles.recipeDetail}>{servings} {servings === 1 ? 'persona' : 'personas'}. Ajusta las cantidades según las porciones elegidas.</Text>
+          <Text style={styles.helperText}>Las cantidades son orientativas y se ajustan al número de personas; ajusta sal, aceite y condimentos al gusto.</Text>
           <Text style={styles.recipeDetailHeading}>Preparación</Text><Text style={styles.recipeDetail}>{selectedRecipe.steps}</Text>
           {selectedRecipe.source ? <Text style={styles.helperText}>Receta consultada en TheMealDB. Algunas recetas pueden aparecer en inglés.</Text> : null}
           <Button title="Cerrar" onPress={() => setSelectedRecipe(null)} style={{ marginTop: 20 }} />
