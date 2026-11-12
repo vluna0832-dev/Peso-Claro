@@ -257,14 +257,21 @@ export default function App() {
     setSavingGoalModal(false); setSavingGoalName(''); setSavingGoalTarget(''); setEditingSavingGoalId(null);
   };
   const deleteSavingGoal = (goal) => {
-    if (Number(goal.saved || 0) > 0) return Alert.alert('Meta con ahorro', 'Primero mueve o retira los ahorros asociados antes de eliminar esta meta. Así no se pierde tu dinero registrado.');
     if ((data.savingGoals || []).length <= 1) return Alert.alert('Necesitas una meta', 'Conserva al menos una meta de ahorro.');
-    Alert.alert('Eliminar meta', `¿Quieres eliminar la meta "${goal.name}"?`, [
+    const destination = data.savingGoals.find(g => g.id !== goal.id);
+    const hasMoney = Number(goal.saved || 0) > 0;
+    Alert.alert('Eliminar meta', hasMoney
+      ? `La cantidad ahorrada en "${goal.name}" se moverá a "${destination.name}" para no perder tu dinero. ¿Continuar?`
+      : `¿Quieres eliminar la meta "${goal.name}"?`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Eliminar', style: 'destructive', onPress: () => {
-        const next = data.savingGoals.filter(g => g.id !== goal.id);
-        setData(prev => ({ ...prev, savingGoals: next }));
-        if (selectedSavingGoalId === goal.id) setSelectedSavingGoalId(next[0].id);
+        setData(prev => ({
+          ...prev,
+          savingGoals: prev.savingGoals.filter(g => g.id !== goal.id).map(g => g.id === destination.id
+            ? { ...g, saved: Number(g.saved || 0) + Number(goal.saved || 0) } : g),
+          savingsEntries: (prev.savingsEntries || []).map(item => item.goalId === goal.id ? { ...item, goalId: destination.id } : item)
+        }));
+        if (selectedSavingGoalId === goal.id) setSelectedSavingGoalId(destination.id);
       } }
     ]);
   };
@@ -522,6 +529,7 @@ export default function App() {
   const renderBudget = () => <ScrollView contentContainerStyle={styles.page}>
     <Header subtitle="Organiza tus metas y tu dinero" />
     <SectionTitle>Mis metas de ahorro</SectionTitle>
+    <Text style={styles.muted}>Total ahorrado entre todas tus metas: <Text style={styles.bold}>{money(data.savings)}</Text></Text>
     {(data.savingGoals || []).map(goal => {
       const saved = Number(goal.saved || 0), target = Number(goal.target || 0);
       const pct = target > 0 ? Math.min(1, saved / target) : 0;
