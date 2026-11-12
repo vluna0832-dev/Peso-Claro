@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert, FlatList, KeyboardAvoidingView, Modal, Platform, SafeAreaView,
+  Alert, FlatList, ImageBackground, KeyboardAvoidingView, Modal, Platform, SafeAreaView,
   ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -97,6 +97,7 @@ const RECIPE_CATALOG = [
 export default function App() {
   const [data, setData] = useState(DEFAULT_DATA);
   const [loaded, setLoaded] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
   const [tab, setTab] = useState('Inicio');
   const [modalVisible, setModalVisible] = useState(false);
   const [type, setType] = useState('expense');
@@ -386,6 +387,15 @@ export default function App() {
     { name: 'Presupuesto', icon: '▤' }, { name: 'Recetas', icon: '♨' }
   ];
   if (!loaded) return <SafeAreaView style={styles.loading}><StatusBar barStyle="dark-content" /><Text style={styles.brand}>Peso <Text style={{ color: COLORS.green }}>Claro</Text></Text><Text style={styles.muted}>Preparando tus finanzas…</Text></SafeAreaView>;
+
+  if (showWelcome) return <SafeAreaView style={{ flex: 1, backgroundColor: '#07140F' }}>
+    <StatusBar barStyle="light-content" backgroundColor="#07140F" />
+    <ImageBackground source={require('./peso-claro-portada.png')} resizeMode="contain" style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+      <TouchableOpacity onPress={() => setShowWelcome(false)} activeOpacity={0.85} style={{ backgroundColor: '#159B68', paddingHorizontal: 34, paddingVertical: 15, borderRadius: 16, marginBottom: 28 }}>
+        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 16 }}>Entrar a Peso Claro</Text>
+      </TouchableOpacity>
+    </ImageBackground>
+  </SafeAreaView>;
 
   return <SafeAreaView style={styles.safe}>
     <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
