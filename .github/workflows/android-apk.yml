@@ -25,6 +25,11 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
+      - name: Vincular proyecto de Expo
+        run: npx eas-cli@latest init --account vicluna --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
       - name: Enviar APK a compilar
         run: npx eas-cli@latest build --platform android --profile preview --non-interactive
         env:
