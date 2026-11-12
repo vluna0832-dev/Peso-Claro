@@ -338,7 +338,7 @@ export default function App() {
     return sum + Number(t.amount || 0) * (t.currency === 'USD' ? rate : 1);
   }, 0);
   const remainingFoodBudget = Math.max(0, foodBudget - foodSpentThisMonth);
-  const recipeLimit = recipeLimitInput.trim() === '' ? remainingFoodBudget : Math.max(0, Number(recipeLimitInput.replace(',', '.')) || 0);
+  const recipeLimit = recipeLimitInput.trim() === '' ? null : Math.max(0, Number(recipeLimitInput.replace(',', '.')) || 0);
   const servings = Math.max(1, Math.min(5, Number.parseInt(recipeServings, 10) || 2));
   const normalizeRecipeText = value => String(value || '').toLocaleLowerCase('es-MX').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\\s+/g, ' ').trim();
   const ingredientAliases = {
@@ -366,7 +366,7 @@ export default function App() {
     const missingIngredients = r.ingredients.filter(ingredient => !leftoverTerms.some(term => ingredientMatches(ingredient, term)));
     const searchMatch = !searchTerm || normalizeRecipeText(r.name).includes(searchTerm) || r.ingredients.some(x => normalizeRecipeText(x).includes(searchTerm));
     return { ...r, matchedIngredients, missingIngredients, matchedCount: matchedIngredients.length, searchMatch };
-  }).filter(r => r.searchMatch && r.cost * servings / 2 <= recipeLimit)
+  }).filter(r => r.searchMatch && (recipeLimit === null || r.cost * servings / 2 <= recipeLimit))
     .sort((a, b) => {
       if (!leftoverTerms.length) return a.name.localeCompare(b.name, 'es-MX');
       return b.matchedCount - a.matchedCount || a.missingIngredients.length - b.missingIngredients.length || a.name.localeCompare(b.name, 'es-MX');
@@ -513,7 +513,7 @@ export default function App() {
         <View style={{ flex: 1 }}>
           <Text style={styles.fieldLabel}>¿Para cuántas personas?</Text>
           <View style={styles.segmentRow}>
-            {[1, 2, 3, 4, 5].map(n => <TouchableOpacity key={n} onPress={() => setRecipeServings(String(n))} style={[styles.segment, servings === n && styles.segmentActive]}><Text style={[styles.segmentText, servings === n && styles.segmentTextActive]}>{n}</Text></TouchableOpacity>)}
+            {[1, 2, 3, 4, 5].map(n => <TouchableOpacity key={n} onPress={() => setRecipeServings(String(n))} style={[styles.segment, servings === n && styles.segmentActive]}><Text style={[styles.segmentText, servings === n && styles.segmentTextActive]}>{n} {n === 1 ? 'persona' : 'personas'}</Text></TouchableOpacity>)}
           </View>
         </View>
         <View style={{ flex: 1 }}>
