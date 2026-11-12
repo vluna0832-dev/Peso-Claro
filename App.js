@@ -134,6 +134,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!loaded || !showWelcome) return;
+    const timer = setTimeout(() => setShowWelcome(false), 2000);
+    return () => clearTimeout(timer);
+  }, [loaded, showWelcome]);
+
+  useEffect(() => {
     if (loaded) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(() =>
       Alert.alert('Error', 'No se pudieron guardar los datos en el dispositivo.'));
   }, [data, loaded]);
@@ -421,11 +427,7 @@ export default function App() {
 
   if (showWelcome) return <SafeAreaView style={{ flex: 1, backgroundColor: '#07140F' }}>
     <StatusBar barStyle="light-content" backgroundColor="#07140F" />
-    <ImageBackground source={require('./peso-claro-portada.png')} resizeMode="contain" style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
-      <TouchableOpacity onPress={() => setShowWelcome(false)} activeOpacity={0.85} style={{ backgroundColor: '#159B68', paddingHorizontal: 34, paddingVertical: 15, borderRadius: 16, marginBottom: 28 }}>
-        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 16 }}>Entrar a Peso Claro</Text>
-      </TouchableOpacity>
-    </ImageBackground>
+    <ImageBackground source={require('./peso-claro-portada.png')} resizeMode="contain" style={{ flex: 1 }} />
   </SafeAreaView>;
 
   return <SafeAreaView style={styles.safe}>
