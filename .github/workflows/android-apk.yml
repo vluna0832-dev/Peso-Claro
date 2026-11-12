@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: peso-claro-android-preview
+  cancel-in-progress: true
+
 jobs:
   build-android:
     name: Generar APK
@@ -27,6 +31,11 @@ jobs:
 
       - name: Vincular proyecto de Expo
         run: npx eas-cli@latest init --account vicluna --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Cancelar compilaciones anteriores pendientes
+        run: npx eas-cli@latest build:cancel --platform android --profile preview --non-interactive || true
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
