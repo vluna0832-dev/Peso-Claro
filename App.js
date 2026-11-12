@@ -4,6 +4,7 @@ import {
   ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import EXTRA_RECIPES from './extraRecipes';
 
 const STORAGE_KEY = '@peso_claro_v1';
 const COLORS = {
@@ -71,7 +72,7 @@ function TransactionRow({ item, rate, onDelete }) {
   </View>;
 }
 
-const RECIPE_CATALOG = [
+const BASE_RECIPE_CATALOG = [
   { name: 'Arroz con huevo y verduras', cost: 48, time: '20 min', ingredients: ['arroz','huevo','zanahoria','calabacita'], steps: 'Cuece el arroz. Saltea las verduras picadas, agrega el huevo y sirve.' },
   { name: 'Tostadas de frijoles', cost: 42, time: '15 min', ingredients: ['tostadas','frijoles','lechuga','jitomate','queso'], steps: 'Calienta los frijoles, úntalos en las tostadas y agrega lechuga, jitomate y queso.' },
   { name: 'Pasta roja sencilla', cost: 55, time: '25 min', ingredients: ['pasta','jitomate','cebolla','ajo'], steps: 'Cuece la pasta. Licúa jitomate, cebolla y ajo; cocina la salsa y mezcla.' },
@@ -93,6 +94,8 @@ const RECIPE_CATALOG = [
   { name: 'Plátano con avena', cost: 28, time: '10 min', ingredients: ['plátano','avena','leche','canela'], steps: 'Cocina la avena con leche y canela. Sirve con plátano en rodajas.' },
   { name: 'Caldo de pollo rendidor', cost: 68, time: '40 min', ingredients: ['pollo','papa','zanahoria','calabacita','arroz'], steps: 'Cuece el pollo. Agrega verduras y arroz; cocina hasta que todo esté suave.' }
 ];
+
+const RECIPE_CATALOG = [...BASE_RECIPE_CATALOG, ...EXTRA_RECIPES];
 
 export default function App() {
   const [data, setData] = useState(DEFAULT_DATA);
