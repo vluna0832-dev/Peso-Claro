@@ -134,12 +134,18 @@ export default function App() {
           if (!Array.isArray(parsed.savingGoals) || !parsed.savingGoals.length) {
             parsed.savingGoals = [{ id: 'legacy-main', name: 'Meta de ahorro', target: Number(parsed.savingsGoal) || 10000, saved: Number(parsed.savings) || 0 }];
             parsed.savingsEntries = (parsed.savingsEntries || []).map(item => ({ ...item, goalId: item.goalId || 'legacy-main' }));
+          } else {
+            parsed.savingsEntries = (parsed.savingsEntries || []).map(item => ({ ...item, goalId: item.goalId || parsed.savingGoals[0].id }));
           }
           setData(parsed);
           setSelectedSavingGoalId(parsed.savingGoals[0]?.id || 'legacy-main');
           setRateInput(String(parsed.exchangeRate));
           setGoalInput(String(parsed.savingsGoal));
           setFoodInput(String(parsed.foodBudget));
+        } else {
+          const fresh = { ...DEFAULT_DATA, savingGoals: [{ id: 'legacy-main', name: 'Mi primera meta', target: 10000, saved: 0 }] };
+          setData(fresh);
+          setSelectedSavingGoalId('legacy-main');
         }
       } catch (e) { Alert.alert('Aviso', 'No se pudieron cargar los datos guardados.'); }
       finally { setLoaded(true); }
